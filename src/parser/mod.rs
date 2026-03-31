@@ -118,6 +118,25 @@ pub fn discover_session_files() -> Vec<std::path::PathBuf> {
                 }
             }
         }
+
+        // Archive: ~/.claude/archive/**/*.jsonl
+        let archive_dir = home.join(".claude/archive");
+        if archive_dir.exists() {
+            for entry in walkdir::WalkDir::new(&archive_dir)
+                .into_iter()
+                .flatten()
+            {
+                let path = entry.path();
+                if path.extension().map(|e| e == "jsonl").unwrap_or(false) {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if name.starts_with("agent-") {
+                            continue;
+                        }
+                    }
+                    files.push(path.to_path_buf());
+                }
+            }
+        }
     }
 
     files
