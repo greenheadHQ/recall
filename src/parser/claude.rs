@@ -40,9 +40,9 @@ pub struct ClaudeParser;
 
 impl SessionParser for ClaudeParser {
     fn can_parse(path: &Path) -> bool {
-        // Claude Code sessions are in ~/.claude/projects/
+        // Claude Code sessions are in ~/.claude/projects/ or ~/.claude/archive/
         path.to_str()
-            .map(|s| s.contains(".claude/projects"))
+            .map(|s| s.contains(".claude/projects") || s.contains(".claude/archive"))
             .unwrap_or(false)
     }
 

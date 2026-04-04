@@ -4,6 +4,7 @@ use super::state::IndexState;
 use super::SessionIndex;
 use crate::parser;
 use anyhow::Result;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use tantivy::IndexWriter;
 
@@ -32,6 +33,28 @@ pub fn discover_and_sort_files() -> Vec<PathBuf> {
         mtime_b.cmp(&mtime_a) // Descending (most recent first)
     });
     files
+}
+
+/// Remove index entries for files that no longer appear in discovery.
+/// This handles dedup eviction (live path replaced by archive path) and
+/// deleted session files.
+pub fn gc_stale_entries(
+    index: &SessionIndex,
+    writer: &mut IndexWriter,
+    state: &mut IndexState,
+    discovered: &[PathBuf],
+) {
+    let discovered_set: HashSet<&PathBuf> = discovered.iter().collect();
+    let stale_paths: Vec<PathBuf> = state
+        .indexed_files
+        .keys()
+        .filter(|p| !discovered_set.contains(p))
+        .cloned()
+        .collect();
+    for path in &stale_paths {
+        index.delete_session(writer, path);
+        state.remove(path);
+    }
 }
 
 /// Index a batch of files, calling progress callbacks as work proceeds.

@@ -1,4 +1,4 @@
-use crate::index::{discover_and_sort_files, index_files, IndexProgress, IndexState, SessionIndex};
+use crate::index::{discover_and_sort_files, gc_stale_entries, index_files, IndexProgress, IndexState, SessionIndex};
 use crate::parser;
 use crate::session::{SearchResult, Session};
 use anyhow::Result;
@@ -579,6 +579,9 @@ fn background_index(index_path: PathBuf, state_path: PathBuf, tx: Sender<IndexMs
             return;
         }
     };
+
+    // Remove stale index entries (e.g. live paths evicted by archive dedup)
+    gc_stale_entries(&index, &mut writer, &mut state, &files);
 
     // Progress callback sends to channel
     let tx_progress = tx.clone();

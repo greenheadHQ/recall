@@ -1,6 +1,6 @@
 //! Synchronous indexing for CLI mode
 
-use super::indexer::{discover_and_sort_files, index_files, IndexProgress};
+use super::indexer::{discover_and_sort_files, gc_stale_entries, index_files, IndexProgress};
 use super::schema::default_index_path;
 use super::state::IndexState;
 use super::SessionIndex;
@@ -43,6 +43,9 @@ pub fn ensure_index_fresh(index: &SessionIndex) -> Result<()> {
     );
 
     let mut writer = index.writer()?;
+
+    // Remove stale index entries (e.g. live paths evicted by archive dedup)
+    gc_stale_entries(index, &mut writer, &mut state, &files);
 
     // Progress callback prints to stderr
     let on_progress = Box::new(|p: IndexProgress| {
